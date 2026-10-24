@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Kaapsehoop Escarpment Pacer (Mobile Edition)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #090d16;
+      color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
+      /* Extra bottom clearance so Samsung / Android navigation bars never cover content */
+      padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 24px));
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    canvas {
+      touch-action: pan-y;
+    }
+    canvas.sculpt-mode {
+      touch-action: none;
+    }
+    /* Smooth slide-up sheet */
+    .sheet-backdrop {
+      transition: opacity 0.2s ease;
+    }
+    .sheet-panel {
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 28px));
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- STICKY TOP HEADER + SAMSUNG-SAFE TOP NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 pt-2.5 pb-2">
+      
+      <!-- Brand + Quick Share Row -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-emerald-500 flex items-center justify-center font-extrabold text-slate-950 text-sm shadow-md shadow-amber-500/20">
+            KH
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h1 class="font-bold text-sm sm:text-base tracking-tight text-white">Kaapsehoop Pacer</h1>
+              <span id="headerRaceBadge" class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">21.1 km</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mono" id="headerSubStats">Target 1:44:59 • 4:58/km</p>
+          </div>
+        </div>
+
+        <button id="btnTopWhatsApp" class="px-3 py-2 rounded-xl text-xs font-bold bg-[#25D366] active:scale-95 hover:bg-[#20bd5a] text-slate-950 shadow-md shadow-[#25D366]/20 transition flex items-center gap-1.5">
+          <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.124.556 4.119 1.528 5.847l-1.528 5.583 5.715-1.499c1.678.902 3.595 1.416 5.632 1.416 6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          <span>Share Plan</span>
+        </button>
+      </div>
+
+      <!-- MOBILE TOP SEGMENTED TABS (Moved up away from Samsung Bottom Nav Bar!) -->
+      <nav class="lg:hidden grid grid-cols-3 gap-1.5 mt-2.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <button data-tab="course" class="mobile-tab-btn py-2 px-2 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950 shadow">
+          1. Course & Map
+        </button>
+        <button data-tab="setup" class="mobile-tab-btn py-2 px-2 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white">
+          2. Pace Setup
+        </button>
+        <button data-tab="splits" class="mobile-tab-btn py-2 px-2 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white">
+          3. KM Splits
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="max-w-7xl mx-auto w-full px-3 sm:px-4 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
+
+    <!-- ========================================== -->
+    <!-- PANEL A: PACE SETUP (Left col on desktop, Tab 2 on Mobile) -->
+    <!-- ========================================== -->
+    <section id="panelSetup" class="lg:col-span-4 space-y-4 hidden lg:block">
+      
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Race & Target Time Setup</h2>
+          <span id="setupAvgPaceBadge" class="text-xs mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">4:58 /km</span>
+        </div>
+
+        <!-- Race Distance Selector -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Select Kaapsehoop Distance</label>
+          <select id="presetSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white font-medium focus:outline-none focus:border-amber-500">
+            <option value="half" selected>Half Marathon (21.1 km | 1,260m → 675m)</option>
+            <option value="full">Full Marathon (42.2 km | 1,640m → 675m)</option>
+            <option value="10k">10 km Speed Drop (10.0 km | 940m → 675m)</option>
+          </select>
+        </div>
+
+        <!-- Quick Goal Time Presets -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">One-Tap Goal Presets</label>
+          <div class="grid grid-cols-4 gap-1.5" id="goalChipsContainer">
+            <button data-h="1" data-m="29" data-s="59" class="goal-chip py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-bold mono text-slate-200 active:scale-95 transition">Sub 1:30</button>
+            <button data-h="1" data-m="44" data-s="59" class="goal-chip py-2 rounded-lg bg-amber-500/20 border border-amber-500 text-xs font-bold mono text-amber-300 active:scale-95 transition">Sub 1:45</button>
+            <button data-h="1" data-m="59" data-s="59" class="goal-chip py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-bold mono text-slate-200 active:scale-95 transition">Sub 2:00</button>
+            <button data-h="2" data-m="14" data-s="59" class="goal-chip py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-bold mono text-slate-200 active:scale-95 transition">Sub 2:15</button>
+          </div>
+        </div>
+
+        <!-- Touch-Friendly +/- Time Steppers -->
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
+          <div class="text-[11px] text-slate-400 font-medium text-center">Fine-Tune Target Finish Time (HH : MM : SS)</div>
+          <div class="grid grid-cols-3 gap-2">
+            <!-- Hours -->
+            <div class="flex flex-col items-center bg-slate-900 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] uppercase text-slate-400 mb-1">Hours</span>
+              <div class="flex items-center justify-between w-full">
+                <button data-step="h" data-dir="-1" class="time-step-btn w-8 h-8 rounded-lg bg-slate-800 active:bg-amber-500 active:text-slate-950 font-bold text-base flex items-center justify-center">-</button>
+                <input id="inputHours" type="number" min="0" max="7" value="1" class="w-10 bg-transparent text-center mono font-extrabold text-base text-white focus:outline-none" />
+                <button data-step="h" data-dir="1" class="time-step-btn w-8 h-8 rounded-lg bg-slate-800 active:bg-amber-500 active:text-slate-950 font-bold text-base flex items-center justify-center">+</button>
+              </div>
+            </div>
+            <!-- Minutes -->
+            <div class="flex flex-col items-center bg-slate-900 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] uppercase text-slate-400 mb-1">Min</span>
+              <div class="flex items-center justify-between w-full">
+                <button data-step="m" data-dir="-1" class="time-step-btn w-8 h-8 rounded-lg bg-slate-800 active:bg-amber-500 active:text-slate-950 font-bold text-base flex items-center justify-center">-</button>
+                <input id="inputMinutes" type="number" min="0" max="59" value="44" class="w-10 bg-transparent text-center mono font-extrabold text-base text-white focus:outline-none" />
+                <button data-step="m" data-dir="1" class="time-step-btn w-8 h-8 rounded-lg bg-slate-800 active:bg-amber-500 active:text-slate-950 font-bold text-base flex items-center justify-center">+</button>
+              </div>
+            </div>
+            <!-- Seconds -->
+            <div class="flex flex-col items-center bg-slate-900 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] uppercase text-slate-400 mb-1">Sec</span>
+              <div class="flex items-center justify-between w-full">
+                <button data-step="s" data-dir="-15" class="time-step-btn w-8 h-8 rounded-lg bg-slate-800 active:bg-amber-500 active:text-slate-950 font-bold text-base flex items-center justify-center">-</button>
+                <input id="inputSeconds" type="number" min="0" max="59" value="59" class="w-10 bg-transparent text-center mono font-extrabold text-base text-white focus:outline-none" />
+                <button data-step="s" data-dir="15" class="time-step-btn w-8 h-8 rounded-lg bg-slate-800 active:bg-amber-500 active:text-slate-950 font-bold text-base flex items-center justify-center">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Downhill Pacing Strategy -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Escarpment Pacing Strategy</label>
+          <select id="strategySelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white font-medium focus:outline-none focus:border-amber-500">
+            <option value="quadsaver" selected>Quad-Saver (Controlled Berlin Drop + Strong Finish)</option>
+            <option value="equal_effort">Constant Metabolic Effort (Grade-Adjusted)</option>
+            <option value="even_pace">Strict Even Splits (Flat Metronome)</option>
+            <option value="aggressive_bank">Aggressive Time-Bank Early</option>
+          </select>
+        </div>
+
+        <!-- Club / Pacer Bus Name -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Runner / Club Bus Name (for WhatsApp)</label>
+          <input id="runnerName" type="text" value="Legogote Villagers Bus" placeholder="e.g. Sub-1:45 Bus" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500" />
+        </div>
+
+        <!-- Runner Mass & Base Cadence Sliders -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="text-slate-400">Runner Mass</span>
+              <span id="massVal" class="mono text-white font-bold">70 kg</span>
+            </div>
+            <input id="massSlider" type="range" min="45" max="115" value="70" class="w-full h-2 accent-amber-500" />
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="text-slate-400">Flat Cadence</span>
+              <span id="cadenceVal" class="mono text-white font-bold">176 spm</span>
+            </div>
+            <input id="cadenceSlider" type="range" min="155" max="200" value="176" class="w-full h-2 accent-emerald-400" />
+          </div>
+        </div>
+
+        <!-- Mobile Quick Button to Jump Back to Course -->
+        <button id="btnDoneSetupMobile" class="lg:hidden w-full py-3 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider shadow-lg">
+          Apply & View Course Map →
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- RIGHT COLUMN (Course Map + Splits on Desktop, Tabbed on Mobile) -->
+    <!-- ========================================== -->
+    <section class="lg:col-span-8 space-y-4">
+
+      <!-- PANEL B: COURSE & BIOMECHANICS MAP (Tab 1 on Mobile) -->
+      <div id="panelCourse" class="space-y-4">
+        
+        <!-- 4 Compact KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Elevation</div>
+            <div id="kpiElev" class="text-base sm:text-lg font-extrabold mono text-white mt-0.5">+205m / -790m</div>
+            <div id="kpiNetDrop" class="text-[11px] text-emerald-400">Net: -585m</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Avg / GAP Pace</div>
+            <div id="kpiPace" class="text-base sm:text-lg font-extrabold mono text-amber-400 mt-0.5">4:58 /km</div>
+            <div id="kpiGap" class="text-[11px] text-slate-300">Flat Eqv: 5:14</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Quad Load</div>
+            <div id="kpiQuad" class="text-base sm:text-lg font-extrabold mono text-rose-400 mt-0.5">312 kJ</div>
+            <div id="kpiQuadStatus" class="text-[11px] text-amber-300">Km 19.8: +5s/km</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Energy Burn</div>
+            <div id="kpiCal" class="text-base sm:text-lg font-extrabold mono text-emerald-400 mt-0.5">1,340 kcal</div>
+            <div class="text-[11px] text-slate-300">13°C → 25°C</div>
+          </div>
+        </div>
+
+        <!-- Interactive Elevation Canvas Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-3">
+          
+          <!-- Touch Mode Toggle Bar (Prevents accidental hill drawing on mobile) -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="inline-flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button id="modeInspectBtn" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 transition">
+                🔍 Inspect Telemetry
+              </button>
+              <button id="modeSculptBtn" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+                ✏️ Sculpt Hills
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button id="btnGhost" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span id="ghostLabel">Ghost Pacer</span>
+              </button>
+              <button id="btnResetProfile" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <div class="relative w-full h-60 sm:h-72 bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+            <canvas id="courseCanvas" class="w-full h-full block"></canvas>
+          </div>
+
+          <!-- Dedicated Thumb Scrubber Slider (Easy 1-thumb inspection without covering canvas) -->
+          <div class="bg-slate-950/90 px-3 py-2.5 rounded-xl border border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400 font-medium">Thumb Scrub Course Position:</span>
+              <span id="hoverReadout" class="mono font-bold text-amber-400">KM 4.5 • 1045m ASL • Berlin Drop</span>
+            </div>
+            <input id="kmScrubSlider" type="range" min="0" max="219" value="45" class="w-full h-2 accent-amber-500" />
+          </div>
+
+          <!-- Real-Time Point Telemetry Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div class="bg-slate-950 px-3 py-2 rounded-xl border border-slate-800/80">
+              <span class="text-slate-500 block text-[10px] uppercase">Slope Grade</span>
+              <span id="telGrade" class="mono font-bold text-white">-5.2%</span>
+            </div>
+            <div class="bg-slate-950 px-3 py-2 rounded-xl border border-slate-800/80">
+              <span class="text-slate-500 block text-[10px] uppercase">Target Split Pace</span>
+              <span id="telPace" class="mono font-bold text-amber-400">4:46 /km</span>
+            </div>
+            <div class="bg-slate-950 px-3 py-2 rounded-xl border border-slate-800/80">
+              <span class="text-slate-500 block text-[10px] uppercase">Cadence & Stride</span>
+              <span id="telBiomech" class="mono font-bold text-emerald-400">181 spm • 1.16m</span>
+            </div>
+            <div class="bg-slate-950 px-3 py-2 rounded-xl border border-slate-800/80">
+              <span class="text-slate-500 block text-[10px] uppercase">Micro-Climate</span>
+              <span id="telTemp" class="mono font-bold text-rose-400">15.7°C • 79% RH</span>
+            </div>
+          </div>
+
+          <!-- Quick Mobile Shortcut Buttons right inside the Course Card (Safe from bottom edge!) -->
+          <div class="lg:hidden grid grid-cols-2 gap-2 pt-1">
+            <button id="btnGoToSetup" class="py-2.5 px-3 rounded-xl bg-slate-800 active:bg-slate-700 text-amber-400 font-bold text-xs border border-slate-700">
+              ⚙️ Adjust Target Time
+            </button>
+            <button id="btnGoToSplits" class="py-2.5 px-3 rounded-xl bg-slate-800 active:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700">
+              📊 View All KM Splits
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PANEL C: KM SPLITS FORECAST (Always visible on Desktop, Tab 3 on Mobile) -->
+      <div id="panelSplits" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 hidden lg:block">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">Kilometer Split Forecast & Quad-Fatigue</h3>
+            <p class="text-[11px] text-slate-400">Tap any kilometer to highlight on the elevation map</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnExportCsv" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+              Export CSV
+            </button>
+            <span id="tableSummaryChip" class="text-xs mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
+              Finish: 1:44:59
+            </span>
+          </div>
+        </div>
+
+        <!-- Mobile-Friendly Card List + Desktop Table -->
+        <div class="overflow-x-auto max-h-[28rem] overflow-y-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] sticky top-0 z-10 border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-2.5">KM</th>
+                <th class="py-2.5 px-2.5">Landmark</th>
+                <th class="py-2.5 px-2.5">Grade</th>
+                <th class="py-2.5 px-2.5">Split</th>
+                <th class="py-2.5 px-2.5">Elapsed</th>
+                <th class="py-2.5 px-2.5 hidden sm:table-cell">Cadence</th>
+                <th class="py-2.5 px-2.5">Quad Load</th>
+              </tr>
+            </thead>
+            <tbody id="splitsTableBody" class="divide-y divide-slate-800/60 mono">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ========================================== -->
+  <!-- WHATSAPP SLIDE-UP SHEET MODAL (Padded well above Samsung buttons) -->
+  <!-- ========================================== -->
+  <div id="whatsAppModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 sheet-backdrop">
+    <div class="bg-slate-900 border-t sm:border border-slate-700 rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl sheet-panel">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[#25D366]/20 border border-[#25D366]/40 flex items-center justify-center text-[#25D366]">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.124.556 4.119 1.528 5.847l-1.528 5.583 5.715-1.499c1.678.902 3.595 1.416 5.632 1.416 6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Share Race Plan to WhatsApp</h3>
+            <p class="text-[11px] text-slate-400">Ready for your running club group chat</p>
+          </div>
+        </div>
+        <button id="closeWhatsAppModal" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-bold">✕</button>
+      </div>
+
+      <!-- Format Toggle -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="fmtKeySplits" class="py-2 px-3 rounded-xl text-xs font-bold bg-amber-500 text-slate-950">
+          Key Checkpoints
+        </button>
+        <button id="fmtAllSplits" class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
+          Every KM Split
+        </button>
+      </div>
+
+      <textarea id="whatsAppTextPreview" rows="9" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs mono text-slate-200 focus:outline-none focus:border-[#25D366]"></textarea>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button id="btnCopyWhatsAppText" class="py-3 px-4 rounded-xl bg-slate-800 active:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700">
+          Copy Text
+        </button>
+        <button id="btnLaunchWhatsApp" class="py-3 px-4 rounded-xl bg-[#25D366] active:bg-[#20bd5a] text-slate-950 font-extrabold text-xs shadow-lg shadow-[#25D366]/20 flex items-center justify-center gap-1.5">
+          <span>Send on WhatsApp</span>
+          <span>→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIMULATOR ENGINE SCRIPT -->
+  <script>
+    // ==========================================
+    // 1. KAAPSEHOOP COURSE DATA
+    // ==========================================
+    const COURSE_PRESETS = {
+      half: {
+        shortBadge: "21.1 km",
+        name: "Kaapsehoop Half Marathon (21.1 km)",
+        distanceKm: 21.1,
+        defaultTime: [1, 44, 59],
+        controlPoints: [
+          [0, 1260], [1.5, 1210], [3.5, 1110], [6.0, 965],
+          [8.0, 885], [9.2, 912], [11.5, 815], [13.5, 745],
+          [15.5, 712], [17.8, 698], [18.9, 678], [19.8, 706], [21.1, 675]
+        ],
+        landmarks: [
+          { km: 0.2, label: "Start (1,260m)", sector: "Kaapsehoop Start" },
+          { km: 4.5, label: "Berlin Drop (-6.5%)", sector: "Berlin Plantation" },
+          { km: 9.2, label: "Pass Roller", sector: "Escarpment Roller" },
+          { km: 13.5, label: "Valley Floor", sector: "Lowveld Valley" },
+          { km: 17.8, label: "Mataffin", sector: "Mataffin Rollers" },
+          { km: 19.8, label: "Km 19.8 Sting (+4.2%)", sector: "Mbombela Sting" },
+          { km: 21.1, label: "Stadium", sector: "Mbombela Finish" }
+        ]
+      },
+      full: {
+        shortBadge: "42.2 km",
+        name: "Kaapsehoop Full Marathon (42.2 km)",
+        distanceKm: 42.2,
+        defaultTime: [3, 39, 59],
+        controlPoints: [
+          [0, 1640], [3.0, 1590], [6.0, 1625], [10.0, 1490],
+          [15.0, 1360], [21.1, 1260], [25.0, 1060], [29.0, 885],
+          [31.0, 912], [35.0, 745], [39.0, 695], [40.8, 715], [42.2, 675]
+        ],
+        landmarks: [
+          { km: 0.5, label: "Start (1,640m)", sector: "High Plateau Start" },
+          { km: 21.1, label: "Halfway (1,260m)", sector: "Half Marathon Merge" },
+          { km: 26.0, label: "Berlin Drop", sector: "Berlin Plantation" },
+          { km: 40.8, label: "Mbombela Sting", sector: "Stadium Overpass" },
+          { km: 42.2, label: "Finish", sector: "Mbombela Stadium" }
+        ]
+      },
+      "10k": {
+        shortBadge: "10.0 km",
+        name: "Kaapsehoop 10 km Speed Drop",
+        distanceKm: 10.0,
+        defaultTime: [0, 47, 30],
+        controlPoints: [
+          [0, 940], [2.0, 865], [4.0, 785], [6.0, 725],
+          [7.8, 690], [8.8, 712], [10.0, 675]
+        ],
+        landmarks: [
+          { km: 0.2, label: "10k Start (940m)", sector: "Escarpment Start" },
+          { km: 3.5, label: "Valley Drop", sector: "Fast Valley Drop" },
+          { km: 8.8, label: "Overpass Sting", sector: "Mbombela Sting" },
+          { km: 10.0, label: "Finish", sector: "Mbombela Stadium" }
+        ]
+      }
+    };
+
+    // ==========================================
+    // 2. STATE & MOBILE TAB NAVIGATION
+    // ==========================================
+    const NUM_NODES = 220;
+    let currentPresetKey = "half";
+    let elevationNodes = [];
+    let computedSplits = [];
+    let selectedSplitIndex = null;
+    let hoverNodeIndex = 45;
+    let touchMode = "inspect"; // "inspect" or "sculpt"
+    let isPointerDown = false;
+    let whatsAppFullMode = false;
+    let ghostRunning = false;
+    let ghostProgress = 0;
+    let ghostAnimId = null;
+
+    const canvas = document.getElementById("courseCanvas");
+    const ctx = canvas.getContext("2d");
+    const presetSelect = document.getElementById("presetSelect");
+    const runnerNameInput = document.getElementById("runnerName");
+    const inputHours = document.getElementById("inputHours");
+    const inputMinutes = document.getElementById("inputMinutes");
+    const inputSeconds = document.getElementById("inputSeconds");
+    const strategySelect = document.getElementById("strategySelect");
+    const massSlider = document.getElementById("massSlider");
+    const cadenceSlider = document.getElementById("cadenceSlider");
+    const kmScrubSlider = document.getElementById("kmScrubSlider");
+
+    function switchMobileTab(tabName) {
+      const panelCourse = document.getElementById("panelCourse");
+      const panelSetup = document.getElementById("panelSetup");
+      const panelSplits = document.getElementById("panelSplits");
+
+      panelCourse.classList.add("hidden");
+      panelSetup.classList.add("hidden");
+      panelSplits.classList.add("hidden");
+
+      if (tabName === "course") panelCourse.classList.remove("hidden");
+      if (tabName === "setup") panelSetup.classList.remove("hidden");
+      if (tabName === "splits") panelSplits.classList.remove("hidden");
+
+      document.querySelectorAll(".mobile-tab-btn").forEach((btn) => {
+        if (btn.dataset.tab === tabName) {
+          btn.className = "mobile-tab-btn py-2 px-2 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950 shadow";
+        } else {
+          btn.className = "mobile-tab-btn py-2 px-2 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white";
+        }
+      });
+
+      if (tabName === "course") {
+        setTimeout(resizeCanvas, 20);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    document.querySelectorAll(".mobile-tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => switchMobileTab(btn.dataset.tab));
+    });
+    document.getElementById("btnGoToSetup").addEventListener("click", () => switchMobileTab("setup"));
+    document.getElementById("btnGoToSplits").addEventListener("click", () => switchMobileTab("splits"));
+    document.getElementById("btnDoneSetupMobile").addEventListener("click", () => switchMobileTab("course"));
+
+    // ==========================================
+    // 3. PROFILE INTERPOLATION & BIOMECHANICS
+    // ==========================================
+    function loadPresetProfile(presetKey) {
+      currentPresetKey = presetKey;
+      const preset = COURSE_PRESETS[presetKey];
+      elevationNodes = [];
+      for (let i = 0; i < NUM_NODES; i++) {
+        const km = (i / (NUM_NODES - 1)) * preset.distanceKm;
+        elevationNodes.push(interpolateElevation(km, preset.controlPoints));
+      }
+    }
+
+    function interpolateElevation(km, pts) {
+      if (km <= pts[0][0]) return pts[0][1];
+      if (km >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [x0, y0] = pts[i];
+        const [x1, y1] = pts[i + 1];
+        if (km >= x0 && km <= x1) {
+          const t = (km - x0) / (x1 - x0);
+          const smoothT = (1 - Math.cos(t * Math.PI)) / 2;
+          return y0 + smoothT * (y1 - y0);
+        }
+      }
+      return pts[0][1];
+    }
+
+    function minettiCr(gradeFraction) {
+      const i = Math.max(-0.40, Math.min(0.40, gradeFraction));
+      return (
+        155.4 * Math.pow(i, 5) -
+        30.4 * Math.pow(i, 4) -
+        43.3 * Math.pow(i, 3) +
+        46.3 * Math.pow(i, 2) +
+        19.5 * i +
+        3.6
+      );
+    }
+
+    function gapSpeedFactor(gradePct) {
+      const i = gradePct / 100;
+      const crGrade = minettiCr(i);
+      if (gradePct < 0) {
+        const optimalBoost = 1 - 0.033 * gradePct - 0.0022 * Math.pow(gradePct, 2);
+        return Math.max(0.78, Math.min(1.16, optimalBoost));
+      }
+      return Math.max(0.45, Math.pow(3.6 / crGrade, 0.72));
+    }
+
+    function formatPace(secPerKm) {
+      const totalSec = Math.max(0, Math.round(secPerKm));
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${m}:${s < 10 ? "0" : ""}${s}`;
+    }
+
+    function formatDuration(totalSeconds) {
+      const sec = Math.max(0, Math.round(totalSeconds));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      if (h > 0) return `${h}:${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+      return `${m}:${s < 10 ? "0" : ""}${s}`;
+    }
+
+    function getLandmarkForKm(km, preset) {
+      for (const lm of preset.landmarks) {
+        if (Math.abs(lm.km - km) <= 1.2) return lm.sector;
+      }
+      if (km < preset.distanceKm * 0.42) return "Berlin Plantation";
+      if (km < preset.distanceKm * 0.75) return "Lowveld Valley";
+      return "Mbombela Run-In";
+    }
+
+    function recalculateSimulation() {
+      const preset = COURSE_PRESETS[currentPresetKey];
+      const totalDistKm = preset.distanceKm;
+      const targetSec = Math.max(
+        1200,
+        (parseInt(inputHours.value, 10) || 0) * 3600 +
+          (parseInt(inputMinutes.value, 10) || 0) * 60 +
+          (parseInt(inputSeconds.value, 10) || 0)
+      );
+
+      const targetAvgPace = targetSec / totalDistKm;
+      const runnerMass = parseFloat(massSlider.value) || 70;
+      const baseCadence = parseFloat(cadenceSlider.value) || 176;
+      const strategy = strategySelect.value;
+
+      document.getElementById("massVal").textContent = `${runnerMass} kg`;
+      document.getElementById("cadenceVal").textContent = `${baseCadence} spm`;
+      document.getElementById("setupAvgPaceBadge").textContent = `${formatPace(targetAvgPace)} /km`;
+      document.getElementById("headerRaceBadge").textContent = preset.shortBadge;
+      document.getElementById("headerSubStats").textContent = `Target ${formatDuration(targetSec)} • ${formatPace(targetAvgPace)}/km`;
+
+      const segments = [];
+      let currentKm = 0;
+      while (currentKm < totalDistKm - 0.001) {
+        const nextKm = Math.min(totalDistKm, Math.floor(currentKm + 1.0001));
+        const segLen = +(nextKm - currentKm).toFixed(2);
+        const startIdx = Math.round((currentKm / totalDistKm) * (NUM_NODES - 1));
+        const endIdx = Math.round((nextKm / totalDistKm) * (NUM_NODES - 1));
+
+        let gain = 0, loss = 0;
+        for (let i = startIdx; i < endIdx; i++) {
+          const diff = elevationNodes[i + 1] - elevationNodes[i];
+          if (diff > 0) gain += diff;
+          else loss += Math.abs(diff);
+        }
+
+        const startElev = elevationNodes[startIdx];
+        const endElev = elevationNodes[endIdx];
+        const gradePct = ((endElev - startElev) / (segLen * 1000)) * 100;
+
+        segments.push({
+          kmLabel: nextKm === totalDistKm ? totalDistKm.toFixed(1) : `${Math.round(nextKm)}`,
+          startKm: currentKm,
+          endKm: nextKm,
+          segLen,
+          endElev,
+          gain,
+          loss,
+          gradePct
+        });
+        currentKm = nextKm;
+      }
+
+      let cumulativeQuadKj = 0;
+      let rawTotalTime = 0;
+
+      segments.forEach((seg) => {
+        const progress = seg.endKm / totalDistKm;
+        const g = seg.gradePct;
+        const gapFactor = gapSpeedFactor(g);
+
+        let brakingFactor = strategy === "quadsaver" ? 0.86 : strategy === "aggressive_bank" ? 1.24 : 1.0;
+        if (seg.loss > 0) {
+          const steepnessMult = g < -4.5 ? 1.35 : 1.0;
+          cumulativeQuadKj += (runnerMass * 9.81 * seg.loss * 0.42 * brakingFactor * steepnessMult) / 1000;
+        }
+        seg.cumQuadKj = cumulativeQuadKj;
+
+        let paceMult = 1 / gapFactor;
+        if (strategy === "even_pace") {
+          paceMult = 1.0 + (g > 0 ? g * 0.018 : g * 0.004);
+        } else if (strategy === "quadsaver") {
+          if (g < -3.0 && progress < 0.55) paceMult = (1 / gapFactor) * 1.032;
+          else if (progress > 0.78) paceMult = (1 / gapFactor) * 0.985;
+        } else if (strategy === "aggressive_bank" && g < -2.0 && progress < 0.6) {
+          paceMult = (1 / gapFactor) * 0.95;
+        }
+
+        const quadFatigueRatio = Math.max(0, (cumulativeQuadKj - 140) / 280);
+        let fatiguePenaltySec = 0;
+        if (progress > 0.65) {
+          const climbSens = g > 0.5 ? 2.4 : 0.7;
+          const stratProt = strategy === "quadsaver" ? 0.55 : strategy === "aggressive_bank" ? 1.65 : 1.0;
+          fatiguePenaltySec = quadFatigueRatio * 8.5 * climbSens * stratProt;
+        }
+
+        seg.rawPaceSecPerKm = targetAvgPace * paceMult + fatiguePenaltySec;
+        seg.fatiguePenaltySec = fatiguePenaltySec;
+        rawTotalTime += seg.rawPaceSecPerKm * seg.segLen;
+      });
+
+      const normFactor = targetSec / rawTotalTime;
+      let elapsedSec = 0, totalKcal = 0, weightedGapSum = 0, totalGain = 0, totalLoss = 0;
+
+      computedSplits = segments.map((seg, idx) => {
+        const paceSecPerKm = seg.rawPaceSecPerKm * normFactor;
+        const segTimeSec = paceSecPerKm * seg.segLen;
+        elapsedSec += segTimeSec;
+        totalGain += seg.gain;
+        totalLoss += seg.loss;
+
+        const gapPaceSecPerKm = paceSecPerKm * gapSpeedFactor(seg.gradePct);
+        weightedGapSum += gapPaceSecPerKm * seg.segLen;
+
+        const cr = minettiCr(seg.gradePct / 100);
+        totalKcal += (cr * runnerMass * (seg.segLen * 1000)) / 4184;
+
+        const speedMps = 1000 / paceSecPerKm;
+        let cadenceAdj = baseCadence;
+        if (seg.gradePct < -2) {
+          cadenceAdj = baseCadence + Math.min(8, Math.abs(seg.gradePct) * 0.95) + (strategy === "quadsaver" ? 2 : 0);
+        } else if (seg.gradePct > 1.5) {
+          cadenceAdj = baseCadence + Math.min(6, seg.gradePct * 0.8);
+        }
+        const strideLen = (speedMps * 60) / cadenceAdj;
+
+        return {
+          ...seg,
+          idx,
+          sector: getLandmarkForKm(seg.endKm, preset),
+          paceSecPerKm,
+          elapsedSec,
+          gapPaceSecPerKm,
+          cr,
+          cadence: Math.round(cadenceAdj),
+          strideLen: strideLen.toFixed(2)
+        };
+      });
+
+      const netDrop = Math.round(elevationNodes[NUM_NODES - 1] - elevationNodes[0]);
+      document.getElementById("kpiElev").textContent = `+${Math.round(totalGain)}m / -${Math.round(totalLoss)}m`;
+      document.getElementById("kpiNetDrop").textContent = `Net: ${netDrop}m`;
+      document.getElementById("kpiPace").textContent = `${formatPace(targetAvgPace)} /km`;
+      document.getElementById("kpiGap").textContent = `Flat Eqv: ${formatPace(weightedGapSum / totalDistKm)}`;
+      document.getElementById("kpiQuad").textContent = `${Math.round(cumulativeQuadKj)} kJ`;
+
+      const stingSplit = computedSplits[computedSplits.length - 2] || computedSplits[computedSplits.length - 1];
+      document.getElementById("kpiQuadStatus").textContent = `Km 19.8: +${Math.round(stingSplit.fatiguePenaltySec)}s/km`;
+      document.getElementById("kpiCal").textContent = `${Math.round(totalKcal).toLocaleString()} kcal`;
+      document.getElementById("tableSummaryChip").textContent = `Finish: ${formatDuration(targetSec)}`;
+
+      renderSplitsTable();
+      updateTelemetryForNode(hoverNodeIndex || 45);
+      drawCanvas();
+    }
+
+    // ==========================================
+    // 4. SPLIT TABLE & CANVAS RENDERER
+    // ==========================================
+    function renderSplitsTable() {
+      const tbody = document.getElementById("splitsTableBody");
+      tbody.innerHTML = "";
+      computedSplits.forEach((sp, index) => {
+        const tr = document.createElement("tr");
+        const isSelected = selectedSplitIndex === index;
+        tr.className = `cursor-pointer transition ${
+          isSelected ? "bg-amber-500/20 text-white" : "hover:bg-slate-800/70 text-slate-300"
+        }`;
+
+        const gradeColor =
+          sp.gradePct <= -3.5 ? "text-emerald-400" : sp.gradePct >= 1.5 ? "text-rose-400 font-bold" : "text-slate-300";
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-2.5 font-bold text-amber-400">${sp.kmLabel}</td>
+          <td class="py-2.5 px-2.5 font-sans text-xs text-slate-300">${sp.sector}</td>
+          <td class="py-2.5 px-2.5 ${gradeColor}">${sp.gradePct > 0 ? "+" : ""}${sp.gradePct.toFixed(1)}%</td>
+          <td class="py-2.5 px-2.5 font-bold text-white">${formatPace(sp.paceSecPerKm)}</td>
+          <td class="py-2.5 px-2.5 text-slate-400">${formatDuration(sp.elapsedSec)}</td>
+          <td class="py-2.5 px-2.5 hidden sm:table-cell text-emerald-400">${sp.cadence} spm</td>
+          <td class="py-2.5 px-2.5 text-rose-300">${Math.round(sp.cumQuadKj)} kJ</td>
+        `;
+
+        tr.addEventListener("click", () => {
+          selectedSplitIndex = index;
+          hoverNodeIndex = Math.round((sp.endKm / COURSE_PRESETS[currentPresetKey].distanceKm) * (NUM_NODES - 1));
+          kmScrubSlider.value = hoverNodeIndex;
+          updateTelemetryForNode(hoverNodeIndex);
+          renderSplitsTable();
+          if (window.innerWidth < 1024) switchMobileTab("course");
+          else drawCanvas();
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawCanvas();
+    }
+
+    function drawCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const w = rect.width, h = rect.height;
+      if (!w || !h) return;
+      ctx.clearRect(0, 0, w, h);
+
+      const pad = { top: 24, right: 18, bottom: 26, left: 42 };
+      const plotW = w - pad.left - pad.right;
+      const plotH = h - pad.top - pad.bottom;
+
+      const preset = COURSE_PRESETS[currentPresetKey];
+      const minElev = Math.min(...elevationNodes) - 45;
+      const maxElev = Math.max(...elevationNodes) + 60;
+
+      const xForIdx = (i) => pad.left + (i / (NUM_NODES - 1)) * plotW;
+      const yForElev = (e) => pad.top + plotH - ((e - minElev) / (maxElev - minElev)) * plotH;
+
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 1;
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#64748b";
+      const elevStep = maxElev - minElev > 650 ? 200 : 100;
+      for (let e = Math.ceil(minElev / elevStep) * elevStep; e < maxElev; e += elevStep) {
+        const y = yForElev(e);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(w - pad.right, y);
+        ctx.stroke();
+        ctx.fillText(`${e}m`, 4, y + 3);
+      }
+
+      const areaGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+      areaGrad.addColorStop(0, "rgba(16, 185, 129, 0.30)");
+      areaGrad.addColorStop(1, "rgba(15, 23, 42, 0.04)");
+
+      ctx.beginPath();
+      ctx.moveTo(xForIdx(0), pad.top + plotH);
+      for (let i = 0; i < NUM_NODES; i++) ctx.lineTo(xForIdx(i), yForElev(elevationNodes[i]));
+      ctx.lineTo(xForIdx(NUM_NODES - 1), pad.top + plotH);
+      ctx.closePath();
+      ctx.fillStyle = areaGrad;
+      ctx.fill();
+
+      for (let i = 0; i < NUM_NODES - 1; i++) {
+        const segDistM = (preset.distanceKm * 1000) / (NUM_NODES - 1);
+        const gradePct = ((elevationNodes[i + 1] - elevationNodes[i]) / segDistM) * 100;
+        ctx.beginPath();
+        ctx.moveTo(xForIdx(i), yForElev(elevationNodes[i]));
+        ctx.lineTo(xForIdx(i + 1), yForElev(elevationNodes[i + 1]));
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = gradePct < -3.5 ? "#10b981" : gradePct > 1.5 ? "#f43f5e" : "#f59e0b";
+        ctx.stroke();
+      }
+
+      if (hoverNodeIndex !== null) {
+        const hx = xForIdx(hoverNodeIndex);
+        const hy = yForElev(elevationNodes[hoverNodeIndex]);
+        ctx.strokeStyle = "rgba(248, 250, 252, 0.4)";
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(hx, pad.top);
+        ctx.lineTo(hx, pad.top + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.arc(hx, hy, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#f59e0b";
+        ctx.fill();
+      }
+    }
+
+    function updateTelemetryForNode(nodeIdx) {
+      const preset = COURSE_PRESETS[currentPresetKey];
+      const cursorKm = (nodeIdx / (NUM_NODES - 1)) * preset.distanceKm;
+      const splitIdx = Math.min(computedSplits.length - 1, Math.floor(cursorKm));
+      const sp = computedSplits[splitIdx];
+      if (!sp) return;
+
+      const elev = Math.round(elevationNodes[nodeIdx]);
+      document.getElementById("hoverReadout").textContent = `KM ${cursorKm.toFixed(1)} • ${elev}m ASL • ${sp.sector}`;
+      document.getElementById("telGrade").textContent = `${sp.gradePct > 0 ? "+" : ""}${sp.gradePct.toFixed(1)}%`;
+      document.getElementById("telPace").textContent = `${formatPace(sp.paceSecPerKm)} /km`;
+      document.getElementById("telBiomech").textContent = `${sp.cadence} spm • ${sp.strideLen}m`;
+
+      const progress = cursorKm / preset.distanceKm;
+      const tempC = (13.0 + progress * 12.5).toFixed(1);
+      const rh = Math.round(84 - progress * 22);
+      document.getElementById("telTemp").textContent = `${tempC}°C • ${rh}% RH`;
+    }
+
+    // Touch Mode Lock & Scrubber
+    document.getElementById("modeInspectBtn").addEventListener("click", () => {
+      touchMode = "inspect";
+      canvas.classList.remove("sculpt-mode");
+      document.getElementById("modeInspectBtn").className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 transition";
+      document.getElementById("modeSculptBtn").className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition";
+    });
+
+    document.getElementById("modeSculptBtn").addEventListener("click", () => {
+      touchMode = "sculpt";
+      canvas.classList.add("sculpt-mode");
+      document.getElementById("modeSculptBtn").className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-400 text-slate-950 transition";
+      document.getElementById("modeInspectBtn").className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition";
+    });
+
+    kmScrubSlider.addEventListener("input", () => {
+      hoverNodeIndex = parseInt(kmScrubSlider.value, 10) || 0;
+      updateTelemetryForNode(hoverNodeIndex);
+      drawCanvas();
+    });
+
+    function handleCanvasTouch(e) {
+      const rect = canvas.getBoundingClientRect();
+      const pad = { top: 24, right: 18, bottom: 26, left: 42 };
+      const plotW = rect.width - pad.left - pad.right;
+      const plotH = rect.height - pad.top - pad.bottom;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const relX = Math.max(0, Math.min(plotW, clientX - rect.left - pad.left));
+      const relY = Math.max(0, Math.min(plotH, clientY - rect.top - pad.top));
+
+      const nodeIdx = Math.round((relX / plotW) * (NUM_NODES - 1));
+      hoverNodeIndex = nodeIdx;
+      kmScrubSlider.value = nodeIdx;
+
+      if (isPointerDown && touchMode === "sculpt") {
+        const minElev = Math.min(...elevationNodes) - 45;
+        const maxElev = Math.max(...elevationNodes) + 60;
+        const targetElev = maxElev - (relY / plotH) * (maxElev - minElev);
+        const brushNodes = 12;
+        for (let i = Math.max(0, nodeIdx - brushNodes); i <= Math.min(NUM_NODES - 1, nodeIdx + brushNodes); i++) {
+          const dist = Math.abs(i - nodeIdx) / brushNodes;
+          const weight = Math.cos(dist * (Math.PI / 2)) * 0.35;
+          elevationNodes[i] = elevationNodes[i] * (1 - weight) + targetElev * weight;
+        }
+        recalculateSimulation();
+      } else {
+        updateTelemetryForNode(nodeIdx);
+        drawCanvas();
+      }
+    }
+
+    canvas.addEventListener("mousedown", (e) => { isPointerDown = true; handleCanvasTouch(e); });
+    canvas.addEventListener("mousemove", (e) => { if (isPointerDown || window.innerWidth >= 1024) handleCanvasTouch(e); });
+    window.addEventListener("mouseup", () => { isPointerDown = false; });
+    canvas.addEventListener("touchstart", (e) => { isPointerDown = true; handleCanvasTouch(e); }, { passive: true });
+    canvas.addEventListener("touchmove", (e) => { if (touchMode === "sculpt") e.preventDefault(); handleCanvasTouch(e); }, { passive: false });
+    canvas.addEventListener("touchend", () => { isPointerDown = false; });
+
+    // ==========================================
+    // 5. STEPPERS, GOAL CHIPS & WHATSAPP SHARE
+    // ==========================================
+    document.querySelectorAll(".time-step-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const field = btn.dataset.step;
+        const delta = parseInt(btn.dataset.dir, 10);
+        if (field === "h") inputHours.value = Math.max(0, Math.min(7, (parseInt(inputHours.value, 10) || 0) + delta));
+        if (field === "m") {
+          let m = (parseInt(inputMinutes.value, 10) || 0) + delta;
+          if (m > 59) { m = 0; inputHours.value = (parseInt(inputHours.value, 10) || 0) + 1; }
+          if (m < 0) { m = 59; inputHours.value = Math.max(0, (parseInt(inputHours.value, 10) || 0) - 1); }
+          inputMinutes.value = m;
+        }
+        if (field === "s") {
+          let s = (parseInt(inputSeconds.value, 10) || 0) + delta;
+          if (s > 59) s = 0;
+          if (s < 0) s = 45;
+          inputSeconds.value = s;
+        }
+        recalculateSimulation();
+      });
+    });
+
+    document.querySelectorAll(".goal-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        inputHours.value = chip.dataset.h;
+        inputMinutes.value = chip.dataset.m;
+        inputSeconds.value = chip.dataset.s;
+        recalculateSimulation();
+      });
+    });
+
+    function getShareableUrl() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const params = new URLSearchParams({
+        race: currentPresetKey,
+        h: inputHours.value,
+        m: inputMinutes.value,
+        s: inputSeconds.value,
+        strat: strategySelect.value,
+        mass: massSlider.value,
+        cad: cadenceSlider.value,
+        bus: runnerNameInput.value.trim() || "Kaapsehoop Team"
+      });
+      return `${baseUrl}?${params.toString()}`;
+    }
+
+    function generateWhatsAppMessage(includeAllSplits = false) {
+      const preset = COURSE_PRESETS[currentPresetKey];
+      const busName = runnerNameInput.value.trim() || "Kaapsehoop Pacer Bus";
+      const totalSec =
+        (parseInt(inputHours.value, 10) || 0) * 3600 +
+        (parseInt(inputMinutes.value, 10) || 0) * 60 +
+        (parseInt(inputSeconds.value, 10) || 0);
+      const avgPace = totalSec / preset.distanceKm;
+      const netDrop = Math.round(elevationNodes[NUM_NODES - 1] - elevationNodes[0]);
+      const finalQuadKj = Math.round(computedSplits[computedSplits.length - 1]?.cumQuadKj || 0);
+
+      let lines = [
+        `🏃‍♂️ *KAAPSEHOOP RACE PACING PLAN* 🇿🇦`,
+        `🏷️ *Bus / Runner:* ${busName}`,
+        `📍 *Course:* ${preset.name} (${netDrop}m Net Drop)`,
+        `⏱️ *Target Finish:* ${formatDuration(totalSec)} (${formatPace(avgPace)}/km avg)`,
+        `🦵 *Eccentric Quad Load:* ${finalQuadKj} kJ`,
+        ``
+      ];
+
+      if (includeAllSplits) {
+        lines.push(`📊 *EVERY KM SPLIT:*`);
+        computedSplits.forEach((sp) => {
+          lines.push(`• *KM ${sp.kmLabel}:* ${formatPace(sp.paceSecPerKm)}/km | ⏱️ ${formatDuration(sp.elapsedSec)}`);
+        });
+      } else {
+        lines.push(`⛰️ *KEY ESCARPMENT CHECKPOINTS:*`);
+        const keyIndices = currentPresetKey === "half" ? [0, 4, 9, 13, 19, computedSplits.length - 1] : [0, 4, 9, computedSplits.length - 1];
+        [...new Set(keyIndices)].filter((i) => i < computedSplits.length).forEach((idx) => {
+          const sp = computedSplits[idx];
+          lines.push(`• *KM ${sp.kmLabel} (${sp.sector}):* ${formatPace(sp.paceSecPerKm)}/km → *${formatDuration(sp.elapsedSec)}*`);
+        });
+      }
+
+      lines.push(``);
+      lines.push(`🔗 *Open Interactive Plan:* ${getShareableUrl()}`);
+      return lines.join("\n");
+    }
+
+    function openWhatsAppModal() {
+      const modal = document.getElementById("whatsAppModal");
+      document.getElementById("whatsAppTextPreview").value = generateWhatsAppMessage(whatsAppFullMode);
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    document.getElementById("btnTopWhatsApp").addEventListener("click", openWhatsAppModal);
+    document.getElementById("closeWhatsAppModal").addEventListener("click", () => {
+      const modal = document.getElementById("whatsAppModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    });
+
+    document.getElementById("fmtKeySplits").addEventListener("click", (e) => {
+      whatsAppFullMode = false;
+      e.target.className = "py-2 px-3 rounded-xl text-xs font-bold bg-amber-500 text-slate-950";
+      document.getElementById("fmtAllSplits").className = "py-2 px-3 rounded-xl text-xs font-bold bg-slate-800 text-slate-300";
+      document.getElementById("whatsAppTextPreview").value = generateWhatsAppMessage(false);
+    });
+
+    document.getElementById("fmtAllSplits").addEventListener("click", (e) => {
+      whatsAppFullMode = true;
+      e.target.className = "py-2 px-3 rounded-xl text-xs font-bold bg-amber-500 text-slate-950";
+      document.getElementById("fmtKeySplits").className = "py-2 px-3 rounded-xl text-xs font-bold bg-slate-800 text-slate-300";
+      document.getElementById("whatsAppTextPreview").value = generateWhatsAppMessage(true);
+    });
+
+    document.getElementById("btnCopyWhatsAppText").addEventListener("click", async (e) => {
+      await navigator.clipboard.writeText(document.getElementById("whatsAppTextPreview").value);
+      e.target.textContent = "✓ Copied!";
+      setTimeout(() => (e.target.textContent = "Copy Text"), 2000);
+    });
+
+    document.getElementById("btnLaunchWhatsApp").addEventListener("click", () => {
+      const text = document.getElementById("whatsAppTextPreview").value;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+    });
+
+    // Ghost Pacer & Reset
+    document.getElementById("btnResetProfile").addEventListener("click", () => {
+      loadPresetProfile(currentPresetKey);
+      recalculateSimulation();
+    });
+
+    document.getElementById("btnGhost").addEventListener("click", () => {
+      ghostRunning = !ghostRunning;
+      document.getElementById("ghostLabel").textContent = ghostRunning ? "Stop Pacer" : "Ghost Pacer";
+      if (ghostRunning) {
+        const step = () => {
+          if (!ghostRunning) return;
+          ghostProgress = (ghostProgress + 0.0025) % 1;
+          hoverNodeIndex = Math.floor(ghostProgress * (NUM_NODES - 1));
+          kmScrubSlider.value = hoverNodeIndex;
+          updateTelemetryForNode(hoverNodeIndex);
+          drawCanvas();
+          ghostAnimId = requestAnimationFrame(step);
+        };
+        ghostAnimId = requestAnimationFrame(step);
+      } else if (ghostAnimId) {
+        cancelAnimationFrame(ghostAnimId);
+      }
+    });
+
+    presetSelect.addEventListener("change", (e) => {
+      const preset = COURSE_PRESETS[e.target.value];
+      [inputHours.value, inputMinutes.value, inputSeconds.value] = preset.defaultTime;
+      loadPresetProfile(e.target.value);
+      recalculateSimulation();
+    });
+
+    [inputHours, inputMinutes, inputSeconds, strategySelect, massSlider, cadenceSlider, runnerNameInput].forEach((el) =>
+      el.addEventListener("input", recalculateSimulation)
+    );
+
+    window.addEventListener("resize", resizeCanvas);
+
+    // Boot
+    loadPresetProfile("half");
+    resizeCanvas();
+    recalculateSimulation();
+  </script>
+</body>
+</html>
